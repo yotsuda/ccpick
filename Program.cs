@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 
 namespace CcPick;
 
@@ -326,6 +327,11 @@ internal static partial class Program
     // Ctrl-E. Runs in the ccpick process, so Console input is reliable.
     static void PromptRename(string id)
     {
+        // fzf leaves the Windows console in raw-input mode; without restoring
+        // line/echo input here, Console.ReadLine() returns empty and the rename
+        // silently does nothing. Reset the mode and refresh the input reader.
+        ResetConsoleInput();
+
         Console.WriteLine();
         Console.WriteLine($"current: {ResolveTitle(id)}");
         Console.Write("new title (Enter to cancel, '-' to reset to auto): ");
@@ -466,5 +472,33 @@ internal static partial class Program
             }
         }
         return false;
+    }
+
+    // ---- console input recovery (Windows) ----
+
+    const int STD_INPUT_HANDLE = -10;
+    const uint ENABLE_PROCESSED_INPUT = 0x0001;
+    const uint ENABLE_LINE_INPUT = 0x0002;
+    const uint ENABLE_ECHO_INPUT = 0x0004;
+
+    [DllImport("kernel32.dll", SetLastError = true)] static extern IntPtr GetStdHandle(int nStdHandle);
+    [DllImport("kernel32.dll", SetLastError = true)] static extern bool GetConsoleMode(IntPtr hConsoleHandle, out uint lpMode);
+    [DllImport("kernel32.dll", SetLastError = true)] static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
+
+    // After fzf exits it may leave stdin in raw mode; re-enable cooked line
+    // input so Console.ReadLine() works, and refresh the cached input reader.
+    static void ResetConsoleInput()
+    {
+        try
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                var h = GetStdHandle(STD_INPUT_HANDLE);
+                if (GetConsoleMode(h, out var mode))
+                    SetConsoleMode(h, mode | ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+            }
+            Console.InputEncoding = Encoding.UTF8; // recreates Console.In
+        }
+        catch { /* best effort */ }
     }
 }
