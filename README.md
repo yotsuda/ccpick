@@ -59,7 +59,7 @@ The same one `dotnet tool` package runs on **Windows, macOS, and Linux**, and th
 |---|---|
 | `ccp` | Open the fzf picker; type to filter, **Ctrl-E** to rename, Enter to resume |
 | `ccp list` | Print one row per session: `date  [folder]  title` |
-| `ccp show <id>` | Print a one-session preview block |
+| `ccp show [<id>]` | Print a session's id / cwd / name (the most recent session if no id) |
 | `ccp name <text>` | Name the most recent session — the one you just exited |
 | `ccp name <id> <text>` | Name a specific session by id (omit `<text>` to type it interactively) |
 | `ccp name <id> --clear` | Reset to the auto-generated title |

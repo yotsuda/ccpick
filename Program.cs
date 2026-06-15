@@ -42,7 +42,7 @@ internal static partial class Program
         Console.WriteLine("  ccp                     open the fzf picker, then claude --resume the chosen session");
         Console.WriteLine("                          (Ctrl-E in the picker renames the selected session)");
         Console.WriteLine("  ccp list                print one row per session: date  [folder]  title");
-        Console.WriteLine("  ccp show <id>           print a one-session preview block");
+        Console.WriteLine("  ccp show [<id>]          print a session's id/cwd/name (latest if no id, like 'name')");
         Console.WriteLine("  ccp name <text>         name the most recent session (the one you just exited)");
         Console.WriteLine("  ccp name <id> <text>    name a specific session by id (omit <text> for a prompt)");
         Console.WriteLine("  ccp name <id> --clear   reset to the auto-generated title");
@@ -401,8 +401,18 @@ internal static partial class Program
 
     static int CmdShow(string arg)
     {
-        if (string.IsNullOrWhiteSpace(arg)) return Fail("usage: ccp show <id>");
-        var id = ExtractId(arg);
+        // No id (or "last") -> the most recent session, mirroring `ccp name`.
+        string id;
+        if (string.IsNullOrWhiteSpace(arg) || arg.Equals("last", StringComparison.OrdinalIgnoreCase))
+        {
+            var latest = GetSessions().FirstOrDefault();
+            if (latest is null) return Fail("no sessions found.");
+            id = latest.Id;
+        }
+        else
+        {
+            id = ExtractId(arg);
+        }
 
         string? cwd;
         var cache = ReadCache();
