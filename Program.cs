@@ -26,10 +26,7 @@ internal static partial class Program
             "list" => CmdList(),
             "rows" => CmdRows(),
             "show" => CmdShow(args.Length > 1 ? args[1] : ""),
-            "rename" => CmdRename(args),
-            // `name [text]` is shorthand for `rename last [text]` — name the
-            // session you just exited without typing its id or "last".
-            "name" => CmdRename(new[] { "rename", "last" }.Concat(args.Skip(1)).ToArray()),
+            "name" => CmdName(args),
             "pick" => CmdPick(),
             "-h" or "--help" or "help" => CmdHelp(),
             _ => Fail($"unknown command: {cmd}")
@@ -47,8 +44,8 @@ internal static partial class Program
         Console.WriteLine("  ccpick list                print one row per session: date  [folder]  title");
         Console.WriteLine("  ccpick show <id>           print a one-session preview block");
         Console.WriteLine("  ccpick name <text>         name the most recent session (the one you just exited)");
-        Console.WriteLine("  ccpick rename <id> <text>  set a custom title (omit <text> to enter it interactively)");
-        Console.WriteLine("  ccpick rename <id> --clear reset to the auto-generated title");
+        Console.WriteLine("  ccpick name <id> <text>    name a specific session by id (omit <text> for a prompt)");
+        Console.WriteLine("  ccpick name <id> --clear   reset to the auto-generated title");
         return 0;
     }
 
@@ -311,33 +308,44 @@ internal static partial class Program
         return 0;
     }
 
-    static int CmdRename(string[] args)
+    // ccpick name [<id>|last] [<text> | --clear]
+    //   - no target           -> the most recent session (the one you just exited)
+    //   - "last"              -> same, explicitly
+    //   - a GUID              -> that specific session
+    //   - omit the text       -> prompt for it interactively
+    static int CmdName(string[] args)
     {
-        if (args.Length < 2) return Fail("usage: ccpick rename <id|last> [new title | --clear]");
-        var id = args[1];
-        // "last" = the most recently active session (e.g. the one you just
-        // exited), so you can name it without copying its GUID.
-        if (string.Equals(id, "last", StringComparison.OrdinalIgnoreCase))
+        // Decide whether arg[1] is a target (id / "last") or the start of a title.
+        string id;
+        int textStart;
+        if (args.Length >= 2 &&
+            (args[1].Equals("last", StringComparison.OrdinalIgnoreCase) || GuidRx().IsMatch(args[1])))
         {
-            var latest = GetSessions().FirstOrDefault();
-            if (latest is null) return Fail("no sessions found.");
-            id = latest.Id;
+            id = args[1].Equals("last", StringComparison.OrdinalIgnoreCase)
+                ? (GetSessions().FirstOrDefault()?.Id ?? "")
+                : ExtractId(args[1]);
+            textStart = 2;
         }
+        else
+        {
+            id = GetSessions().FirstOrDefault()?.Id ?? "";
+            textStart = 1;
+        }
+        if (string.IsNullOrEmpty(id)) return Fail("no sessions found.");
+
         var titles = ReadTitles();
 
-        if (args.Length >= 3 && args[2] == "--clear")
+        if (args.Length > textStart && args[textStart] == "--clear")
         {
             titles.Remove(id);
             WriteTitles(titles);
             Console.WriteLine("title reset to auto.");
-            return 0;
         }
-
-        if (args.Length >= 3)
+        else if (args.Length > textStart)
         {
-            titles[id] = string.Join(' ', args.Skip(2)).Trim();
+            titles[id] = string.Join(' ', args.Skip(textStart)).Trim();
             WriteTitles(titles);
-            Console.WriteLine("renamed.");
+            Console.WriteLine("named.");
         }
         else
         {
@@ -346,7 +354,7 @@ internal static partial class Program
         return 0;
     }
 
-    // Interactive rename used by both `ccpick rename <id>` and the picker's
+    // Interactive title entry used by both `ccpick name` and the picker's
     // Ctrl-E. Runs in the ccpick process, so Console input is reliable.
     static void PromptRename(string id)
     {
