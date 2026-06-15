@@ -60,8 +60,8 @@ The same one `dotnet tool` package runs on **Windows, macOS, and Linux**, and `c
 | `ccpick` | Open the fzf picker; type to filter, **Ctrl-E** to rename, Enter to resume |
 | `ccpick list` | Print one row per session: `date  [folder]  title` |
 | `ccpick show <id>` | Print a one-session preview block |
+| `ccpick name <text>` | Name the most recent session — the one you just exited |
 | `ccpick rename <id> <text>` | Set a custom title (omit `<text>` to type it interactively) |
-| `ccpick rename last <text>` | Name the most recent session — the one you just exited |
 | `ccpick rename <id> --clear` | Reset to the auto-generated title |
 
 ## Custom titles
@@ -71,10 +71,10 @@ Auto-titles are handy but generic. Press **Ctrl-E** on any row in the picker to 
 **Name a session right after exiting it.** When Claude Code prints `claude --resume <guid>` on exit, you don't even need the GUID — just run:
 
 ```sh
-ccpick rename last "what this session was about"
+ccpick name "what this session was about"
 ```
 
-`last` resolves to the most recently active session, so you can label it on the spot.
+`name` labels the most recently active session, so you can tag it on the spot. (It's shorthand for `ccpick rename last …`.)
 
 ## Notes
 

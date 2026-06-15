@@ -26,7 +26,10 @@ internal static partial class Program
             "list" => CmdList(),
             "rows" => CmdRows(),
             "show" => CmdShow(args.Length > 1 ? args[1] : ""),
-            "rename" or "name" => CmdRename(args),
+            "rename" => CmdRename(args),
+            // `name [text]` is shorthand for `rename last [text]` — name the
+            // session you just exited without typing its id or "last".
+            "name" => CmdRename(new[] { "rename", "last" }.Concat(args.Skip(1)).ToArray()),
             "pick" => CmdPick(),
             "-h" or "--help" or "help" => CmdHelp(),
             _ => Fail($"unknown command: {cmd}")
@@ -43,8 +46,8 @@ internal static partial class Program
         Console.WriteLine("                             (Ctrl-E in the picker renames the selected session)");
         Console.WriteLine("  ccpick list                print one row per session: date  [folder]  title");
         Console.WriteLine("  ccpick show <id>           print a one-session preview block");
+        Console.WriteLine("  ccpick name <text>         name the most recent session (the one you just exited)");
         Console.WriteLine("  ccpick rename <id> <text>  set a custom title (omit <text> to enter it interactively)");
-        Console.WriteLine("  ccpick rename last <text>  name the most recent session (the one you just exited)");
         Console.WriteLine("  ccpick rename <id> --clear reset to the auto-generated title");
         return 0;
     }
