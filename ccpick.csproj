@@ -11,7 +11,7 @@
 
     <!-- dotnet tool: one NuGet package installs on Windows / macOS / Linux -->
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>ccpick</ToolCommandName>
+    <ToolCommandName>ccp</ToolCommandName>
     <PackageId>ccpick</PackageId>
     <Version>0.1.0</Version>
     <Authors>Yoshifumi Tsuda</Authors>

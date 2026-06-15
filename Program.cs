@@ -37,15 +37,15 @@ internal static partial class Program
 
     static int CmdHelp()
     {
-        Console.WriteLine("ccpick - Claude Code session picker (fzf-based)");
+        Console.WriteLine("ccp - Claude Code session picker (fzf-based)");
         Console.WriteLine();
-        Console.WriteLine("  ccpick                     open the fzf picker, then claude --resume the chosen session");
-        Console.WriteLine("                             (Ctrl-E in the picker renames the selected session)");
-        Console.WriteLine("  ccpick list                print one row per session: date  [folder]  title");
-        Console.WriteLine("  ccpick show <id>           print a one-session preview block");
-        Console.WriteLine("  ccpick name <text>         name the most recent session (the one you just exited)");
-        Console.WriteLine("  ccpick name <id> <text>    name a specific session by id (omit <text> for a prompt)");
-        Console.WriteLine("  ccpick name <id> --clear   reset to the auto-generated title");
+        Console.WriteLine("  ccp                     open the fzf picker, then claude --resume the chosen session");
+        Console.WriteLine("                          (Ctrl-E in the picker renames the selected session)");
+        Console.WriteLine("  ccp list                print one row per session: date  [folder]  title");
+        Console.WriteLine("  ccp show <id>           print a one-session preview block");
+        Console.WriteLine("  ccp name <text>         name the most recent session (the one you just exited)");
+        Console.WriteLine("  ccp name <id> <text>    name a specific session by id (omit <text> for a prompt)");
+        Console.WriteLine("  ccp name <id> --clear   reset to the auto-generated title");
         return 0;
     }
 
@@ -308,7 +308,7 @@ internal static partial class Program
         return 0;
     }
 
-    // ccpick name [<id>|last] [<text> | --clear]
+    // ccp name [<id>|last] [<text> | --clear]
     //   - no target           -> the most recent session (the one you just exited)
     //   - "last"              -> same, explicitly
     //   - a GUID              -> that specific session
@@ -354,8 +354,8 @@ internal static partial class Program
         return 0;
     }
 
-    // Interactive title entry used by both `ccpick name` and the picker's
-    // Ctrl-E. Runs in the ccpick process, so Console input is reliable.
+    // Interactive title entry used by both `ccp name` and the picker's
+    // Ctrl-E. Runs in the ccp process, so Console input is reliable.
     static void PromptRename(string id)
     {
         // fzf leaves the Windows console in raw-input mode; without restoring
@@ -388,7 +388,7 @@ internal static partial class Program
 
     static int CmdShow(string arg)
     {
-        if (string.IsNullOrWhiteSpace(arg)) return Fail("usage: ccpick show <id>");
+        if (string.IsNullOrWhiteSpace(arg)) return Fail("usage: ccp show <id>");
         var id = ExtractId(arg);
 
         string? cwd;
@@ -447,8 +447,8 @@ internal static partial class Program
             {
                 "--ansi", "--delimiter", "\t", "--with-nth", "2",
                 // Pass the whole row ({}) — with --with-nth, {1} resolves to the
-                // visible field, not the id. ccpick show digs the GUID out.
-                "--preview", "ccpick show {}", "--preview-window", "right:45%:wrap",
+                // visible field, not the id. ccp show digs the GUID out.
+                "--preview", "ccp show {}", "--preview-window", "right:45%:wrap",
                 // We capture Ctrl-E ourselves: fzf reports the pressed key on the
                 // first output line, and the rename prompt then runs in THIS
                 // process — which reliably owns the terminal, unlike an

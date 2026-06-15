@@ -1,9 +1,9 @@
 # ccpick
 
-A tiny, fast **session picker for [Claude Code](https://github.com/anthropics/claude-code)** built around [`fzf`](https://github.com/junegunn/fzf). Launch it, fuzzy-filter your recent sessions by their summaries, hit Enter — it runs `claude --resume <id>` for you.
+A tiny, fast **session picker for [Claude Code](https://github.com/anthropics/claude-code)** built around [`fzf`](https://github.com/junegunn/fzf). Launch it, fuzzy-filter your recent sessions by their summaries, hit Enter — it runs `claude --resume <id>` for you. (The project is `ccpick`; it installs the **`ccp`** command.)
 
 ```
-ccpick
+ccp
 ```
 
 No more copying `claude --resume <guid>` out of a notes file, and no more scrolling the built-in picker: just type a few letters of what the session was about.
@@ -21,13 +21,13 @@ Those GUIDs are already on disk as `~/.claude/projects/<slug>/<guid>.jsonl` tran
 ## How it works
 
 ```
-ccpick list   →   fzf  (real-time fuzzy filter + preview)   →   claude --resume <chosen id>
+ccp list   →   fzf  (real-time fuzzy filter + preview)   →   claude --resume <chosen id>
 ```
 
 - **Reads** `~/.claude/projects/<slug>/<guid>.jsonl` (top-level files only; `subagents/` internal logs are skipped).
 - **Titles** come from the first real user prompt or a `summary` line — heuristic, fully local, nothing is sent anywhere.
 - **Caches** results in `~/.claude/ccpick-cache.json` keyed by file mtime, so only changed sessions are re-scanned. Cold scan of ~100 sessions ≈ 2 s; warm launches ≈ 0.2 s.
-- **Preview** of the focused session is shown live by re-invoking `ccpick show <id>` (a ~0.2 s spawn — cheap because the tool starts fast).
+- **Preview** of the focused session is shown live by re-invoking `ccp show <id>` (a ~0.2 s spawn — cheap because the tool starts fast).
 
 It is *not* an `fzf` plugin — `fzf` has no plugin system. `ccpick` is a small wrapper that uses `fzf` as the interactive filter, like `forgit` or `fzf-git.sh`.
 
@@ -44,7 +44,7 @@ winget install fzf                  # or: brew install fzf / apt install fzf
 dotnet tool install --global ccpick
 ```
 
-The same one `dotnet tool` package runs on **Windows, macOS, and Linux**, and `ccpick` lands on your `PATH` automatically.
+The same one `dotnet tool` package runs on **Windows, macOS, and Linux**, and the **`ccp`** command lands on your `PATH` automatically.
 
 > Not yet published to NuGet. Until then, install from a local build:
 > ```sh
@@ -57,24 +57,24 @@ The same one `dotnet tool` package runs on **Windows, macOS, and Linux**, and `c
 
 | Command | What it does |
 |---|---|
-| `ccpick` | Open the fzf picker; type to filter, **Ctrl-E** to rename, Enter to resume |
-| `ccpick list` | Print one row per session: `date  [folder]  title` |
-| `ccpick show <id>` | Print a one-session preview block |
-| `ccpick name <text>` | Name the most recent session — the one you just exited |
-| `ccpick name <id> <text>` | Name a specific session by id (omit `<text>` to type it interactively) |
-| `ccpick name <id> --clear` | Reset to the auto-generated title |
+| `ccp` | Open the fzf picker; type to filter, **Ctrl-E** to rename, Enter to resume |
+| `ccp list` | Print one row per session: `date  [folder]  title` |
+| `ccp show <id>` | Print a one-session preview block |
+| `ccp name <text>` | Name the most recent session — the one you just exited |
+| `ccp name <id> <text>` | Name a specific session by id (omit `<text>` to type it interactively) |
+| `ccp name <id> --clear` | Reset to the auto-generated title |
 
 ## Custom titles
 
-Auto-titles are handy but generic. Press **Ctrl-E** on any row in the picker to give that session a memorable name, or use `ccpick name`. Overrides are stored in `~/.claude/ccpick-titles.json`, **separate from the mtime cache**, so a name you set sticks even as the session keeps growing.
+Auto-titles are handy but generic. Press **Ctrl-E** on any row in the picker to give that session a memorable name, or use `ccp name`. Overrides are stored in `~/.claude/ccpick-titles.json`, **separate from the mtime cache**, so a name you set sticks even as the session keeps growing.
 
 **Name a session right after exiting it.** When Claude Code prints `claude --resume <guid>` on exit, you don't even need the GUID — just run:
 
 ```sh
-ccpick name "what this session was about"
+ccp name "what this session was about"
 ```
 
-`name` labels the most recently active session, so you can tag it on the spot. (It's shorthand for `ccpick rename last …`.)
+`name` labels the most recently active session, so you can tag it on the spot.
 
 ## Notes
 
