@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>ccpick</AssemblyName>
+    <RootNamespace>CcPick</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+
+    <!-- dotnet tool: one NuGet package installs on Windows / macOS / Linux -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>ccpick</ToolCommandName>
+    <PackageId>ccpick</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Yoshifumi Tsuda</Authors>
+    <Description>Tiny fzf-based session picker for Claude Code: fuzzy-filter recent sessions and claude --resume the one you pick.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

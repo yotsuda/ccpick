@@ -1,3 +1,8 @@
+# .NET build output
+bin/
+obj/
+*.nupkg
+
 # Windows
 Thumbs.db
 Desktop.ini

@@ -21,30 +21,37 @@ Those GUIDs are already on disk as `~/.claude/projects/<slug>/<guid>.jsonl` tran
 ## How it works
 
 ```
-ccpick list   →   fzf  (real-time fuzzy filter)   →   claude --resume <chosen id>
+ccpick list   →   fzf  (real-time fuzzy filter + preview)   →   claude --resume <chosen id>
 ```
 
 - **Reads** `~/.claude/projects/<slug>/<guid>.jsonl` (top-level files only; `subagents/` internal logs are skipped).
 - **Titles** come from the first real user prompt or a `summary` line — heuristic, fully local, nothing is sent anywhere.
-- **Caches** results in `~/.claude/ccpick-cache.json` keyed by file mtime, so only changed sessions are re-scanned. Cold scan of ~100 sessions ≈ a few seconds; warm launches are near-instant.
+- **Caches** results in `~/.claude/ccpick-cache.json` keyed by file mtime, so only changed sessions are re-scanned. Cold scan of ~100 sessions ≈ 2 s; warm launches ≈ 0.2 s.
+- **Preview** of the focused session is shown live by re-invoking `ccpick show <id>` (a ~0.2 s spawn — cheap because the tool starts fast).
 
 It is *not* an `fzf` plugin — `fzf` has no plugin system. `ccpick` is a small wrapper that uses `fzf` as the interactive filter, like `forgit` or `fzf-git.sh`.
 
 ## Requirements
 
-- **PowerShell 7+** (`pwsh`)
-- **fzf** — `winget install fzf` (or `scoop install fzf`)
+- **.NET 8+ runtime** (the tool is a [.NET global tool](https://learn.microsoft.com/dotnet/core/tools/global-tools))
+- **fzf** — `winget install fzf` / `brew install fzf` / `apt install fzf`
 - **claude** on `PATH`
 
 ## Install
 
-```powershell
-git clone https://github.com/<you>/ccpick.git C:\Tools\ccpick
-winget install fzf
-# add C:\Tools\ccpick to your PATH (so `ccpick` works from any cmd / pwsh window)
+```sh
+winget install fzf                  # or: brew install fzf / apt install fzf
+dotnet tool install --global ccpick
 ```
 
-`ccpick.cmd` is a thin launcher so you can run `ccpick` straight from **cmd.exe**; it just invokes `ccpick.ps1`, which holds all the logic.
+The same one `dotnet tool` package runs on **Windows, macOS, and Linux**, and `ccpick` lands on your `PATH` automatically.
+
+> Not yet published to NuGet. Until then, install from a local build:
+> ```sh
+> git clone https://github.com/yotsuda/ccpick && cd ccpick
+> dotnet pack -c Release
+> dotnet tool install --global --add-source ./bin/Release ccpick
+> ```
 
 ## Usage
 
@@ -54,15 +61,15 @@ winget install fzf
 | `ccpick list` | Print one TAB-separated row per session (`id  date  cwd  title`) |
 | `ccpick show <id>` | Print a one-session preview block |
 
-## Notes & limitations
+## Notes
 
-- **UTF-8 is forced** on the console + native pipe so non-ASCII titles (Japanese, etc.) survive the round trip through `fzf`.
-- **No live preview pane (yet).** Spawning `pwsh` per keystroke for a preview costs ~1.4 s and makes `fzf` stutter; a rich preview needs a fast-start helper (a compiled binary or resident daemon). The row already shows date / cwd / title.
+- **UTF-8 everywhere.** The pipe to/from `fzf` is forced to UTF-8 so non-ASCII titles (Japanese, etc.) survive the round trip.
 - Titles are heuristic; slash-command sessions (e.g. `/clear`) read a little oddly.
+- A **legacy PowerShell version** (no .NET build needed, but pulls in `pwsh` and has no live preview) lives in [`pwsh/`](pwsh/).
 
 ## Related tools
 
-Several Claude Code session browsers exist. `ccpick`'s niche is **fzf-powered fuzzy search + minimal footprint + cmd.exe-friendly on Windows**:
+Several Claude Code session browsers exist. `ccpick`'s niche is **fzf-powered fuzzy search + tiny footprint + one cross-platform `dotnet tool`**:
 
 - [sasazame/ccresume](https://github.com/sasazame/ccresume) — Node/Ink custom TUI, keyboard navigation (no fuzzy search), cross-platform.
 - [josephyaduvanshi/claude-history-manager](https://github.com/JosephYaduvanshi/claude-history-manager) — native macOS app with pin/tag/search.
