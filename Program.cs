@@ -44,6 +44,7 @@ internal static partial class Program
         Console.WriteLine("  ccpick list                print one row per session: date  [folder]  title");
         Console.WriteLine("  ccpick show <id>           print a one-session preview block");
         Console.WriteLine("  ccpick rename <id> <text>  set a custom title (omit <text> to enter it interactively)");
+        Console.WriteLine("  ccpick rename last <text>  name the most recent session (the one you just exited)");
         Console.WriteLine("  ccpick rename <id> --clear reset to the auto-generated title");
         return 0;
     }
@@ -298,8 +299,16 @@ internal static partial class Program
 
     static int CmdRename(string[] args)
     {
-        if (args.Length < 2) return Fail("usage: ccpick rename <id> [new title | --clear]");
+        if (args.Length < 2) return Fail("usage: ccpick rename <id|last> [new title | --clear]");
         var id = args[1];
+        // "last" = the most recently active session (e.g. the one you just
+        // exited), so you can name it without copying its GUID.
+        if (string.Equals(id, "last", StringComparison.OrdinalIgnoreCase))
+        {
+            var latest = GetSessions().FirstOrDefault();
+            if (latest is null) return Fail("no sessions found.");
+            id = latest.Id;
+        }
         var titles = ReadTitles();
 
         if (args.Length >= 3 && args[2] == "--clear")

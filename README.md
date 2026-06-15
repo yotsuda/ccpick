@@ -61,11 +61,20 @@ The same one `dotnet tool` package runs on **Windows, macOS, and Linux**, and `c
 | `ccpick list` | Print one row per session: `date  [folder]  title` |
 | `ccpick show <id>` | Print a one-session preview block |
 | `ccpick rename <id> <text>` | Set a custom title (omit `<text>` to type it interactively) |
+| `ccpick rename last <text>` | Name the most recent session — the one you just exited |
 | `ccpick rename <id> --clear` | Reset to the auto-generated title |
 
 ## Custom titles
 
 Auto-titles are handy but generic. Press **Ctrl-E** on any row in the picker to give that session a memorable name, or use `ccpick rename`. Overrides are stored in `~/.claude/ccpick-titles.json`, **separate from the mtime cache**, so a name you set sticks even as the session keeps growing.
+
+**Name a session right after exiting it.** When Claude Code prints `claude --resume <guid>` on exit, you don't even need the GUID — just run:
+
+```sh
+ccpick rename last "what this session was about"
+```
+
+`last` resolves to the most recently active session, so you can label it on the spot.
 
 ## Notes
 
