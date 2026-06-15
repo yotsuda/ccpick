@@ -57,14 +57,21 @@ The same one `dotnet tool` package runs on **Windows, macOS, and Linux**, and `c
 
 | Command | What it does |
 |---|---|
-| `ccpick` | Open the fzf picker; type to filter, Enter to resume |
-| `ccpick list` | Print one TAB-separated row per session (`id  date  cwd  title`) |
+| `ccpick` | Open the fzf picker; type to filter, **Ctrl-E** to rename, Enter to resume |
+| `ccpick list` | Print one row per session: `date  [folder]  title` |
 | `ccpick show <id>` | Print a one-session preview block |
+| `ccpick rename <id> <text>` | Set a custom title (omit `<text>` to type it interactively) |
+| `ccpick rename <id> --clear` | Reset to the auto-generated title |
+
+## Custom titles
+
+Auto-titles are handy but generic. Press **Ctrl-E** on any row in the picker to give that session a memorable name, or use `ccpick rename`. Overrides are stored in `~/.claude/ccpick-titles.json`, **separate from the mtime cache**, so a name you set sticks even as the session keeps growing.
 
 ## Notes
 
 - **UTF-8 everywhere.** The pipe to/from `fzf` is forced to UTF-8 so non-ASCII titles (Japanese, etc.) survive the round trip.
-- Titles are heuristic; slash-command sessions (e.g. `/clear`) read a little oddly.
+- The folder column appears only when your sessions span more than one working directory; the home dir shows as `~`.
+- Auto-titles are heuristic; slash-command sessions (e.g. `/clear`) read a little oddly — rename them.
 - A **legacy PowerShell version** (no .NET build needed, but pulls in `pwsh` and has no live preview) lives in [`pwsh/`](pwsh/).
 
 ## Related tools

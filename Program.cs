@@ -11,6 +11,9 @@ internal static partial class Program
     static readonly string Home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     static string ProjectsRoot => Path.Combine(Home, ".claude", "projects");
     static string CachePath => Path.Combine(Home, ".claude", "ccpick-cache.json");
+    // User-assigned title overrides (id -> title). Independent of the mtime
+    // cache, so a custom name survives session re-scans.
+    static string TitlesPath => Path.Combine(Home, ".claude", "ccpick-titles.json");
 
     static int Main(string[] args)
     {
@@ -20,7 +23,9 @@ internal static partial class Program
         return cmd switch
         {
             "list" => CmdList(),
+            "rows" => CmdRows(),
             "show" => CmdShow(args.Length > 1 ? args[1] : ""),
+            "rename" or "name" => CmdRename(args),
             "pick" => CmdPick(),
             "-h" or "--help" or "help" => CmdHelp(),
             _ => Fail($"unknown command: {cmd}")
@@ -33,9 +38,12 @@ internal static partial class Program
     {
         Console.WriteLine("ccpick - Claude Code session picker (fzf-based)");
         Console.WriteLine();
-        Console.WriteLine("  ccpick            open the fzf picker, then claude --resume the chosen session");
-        Console.WriteLine("  ccpick list       print one TAB-separated row per session: id<TAB>date<TAB>cwd<TAB>title");
-        Console.WriteLine("  ccpick show <id>  print a one-session preview block");
+        Console.WriteLine("  ccpick                     open the fzf picker, then claude --resume the chosen session");
+        Console.WriteLine("                             (Ctrl-E in the picker renames the selected session)");
+        Console.WriteLine("  ccpick list                print one row per session: date  [folder]  title");
+        Console.WriteLine("  ccpick show <id>           print a one-session preview block");
+        Console.WriteLine("  ccpick rename <id> <text>  set a custom title (omit <text> to enter it interactively)");
+        Console.WriteLine("  ccpick rename <id> --clear reset to the auto-generated title");
         return 0;
     }
 
@@ -96,7 +104,43 @@ internal static partial class Program
             WriteCache(cache);
         }
 
-        return rows.OrderByDescending(s => s.Mtime).ToList();
+        var titles = ReadTitles();
+        return rows
+            .OrderByDescending(s => s.Mtime)
+            .Select(s => titles.TryGetValue(s.Id, out var ov) && !string.IsNullOrWhiteSpace(ov)
+                ? s with { Title = ov }
+                : s)
+            .ToList();
+    }
+
+    // ---- title overrides ----
+
+    static Dictionary<string, string> ReadTitles()
+    {
+        try
+        {
+            if (File.Exists(TitlesPath))
+                return JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(TitlesPath)) ?? new();
+        }
+        catch { /* corrupt -> ignore */ }
+        return new();
+    }
+
+    static void WriteTitles(Dictionary<string, string> t)
+    {
+        try { File.WriteAllText(TitlesPath, JsonSerializer.Serialize(t, new JsonSerializerOptions { WriteIndented = true })); }
+        catch { /* best effort */ }
+    }
+
+    // Current displayed title for one id: override, else cache, else scan.
+    static string ResolveTitle(string id)
+    {
+        var titles = ReadTitles();
+        if (titles.TryGetValue(id, out var ov) && !string.IsNullOrWhiteSpace(ov)) return ov;
+        var cache = ReadCache();
+        if (cache.TryGetValue(id, out var hit)) return hit.Title;
+        var path = FindSessionFile(id);
+        return path is not null ? Extract(path).title : "(unknown)";
     }
 
     // Read up to 60 lines; pull the first cwd and the first usable title
@@ -241,24 +285,67 @@ internal static partial class Program
         return 0;
     }
 
+    // Internal: the exact "<id>\t<visible>" lines fzf consumes. Used by the
+    // picker's reload after a rename.
+    static int CmdRows()
+    {
+        var sessions = GetSessions();
+        var wf = MultiFolder(sessions);
+        foreach (var s in sessions) Console.WriteLine($"{s.Id}\t{Visible(s, wf)}");
+        return 0;
+    }
+
+    static int CmdRename(string[] args)
+    {
+        if (args.Length < 2) return Fail("usage: ccpick rename <id> [new title | --clear]");
+        var id = args[1];
+        var titles = ReadTitles();
+
+        if (args.Length >= 3 && args[2] == "--clear")
+        {
+            titles.Remove(id);
+            WriteTitles(titles);
+            Console.WriteLine("title reset to auto.");
+            return 0;
+        }
+
+        string newTitle;
+        if (args.Length >= 3)
+        {
+            newTitle = string.Join(' ', args.Skip(2));
+        }
+        else
+        {
+            Console.WriteLine($"current: {ResolveTitle(id)}");
+            Console.Write("new title (Enter to cancel): ");
+            newTitle = Console.ReadLine() ?? "";
+            if (string.IsNullOrWhiteSpace(newTitle)) { Console.WriteLine("cancelled."); return 0; }
+        }
+
+        titles[id] = newTitle.Trim();
+        WriteTitles(titles);
+        Console.WriteLine("renamed.");
+        return 0;
+    }
+
     static int CmdShow(string id)
     {
         if (string.IsNullOrWhiteSpace(id)) return Fail("usage: ccpick show <id>");
 
-        string? cwd; string title;
+        string? cwd;
         var cache = ReadCache();
-        if (cache.TryGetValue(id, out var hit)) { cwd = hit.Cwd; title = hit.Title; }
+        if (cache.TryGetValue(id, out var hit)) { cwd = hit.Cwd; }
         else
         {
             var path = FindSessionFile(id);
             if (path is null) { Console.WriteLine($"session not found: {id}"); return 0; }
-            (cwd, title) = Extract(path);
+            (cwd, _) = Extract(path);
         }
 
         Console.WriteLine($"id   : {id}");
         Console.WriteLine($"cwd  : {cwd}");
         Console.WriteLine();
-        Console.WriteLine(title);
+        Console.WriteLine(ResolveTitle(id));
         return 0;
     }
 
@@ -300,7 +387,10 @@ internal static partial class Program
             "--ansi", "--delimiter", "\t", "--with-nth", "2",
             // `show` is now a fast exe, so a live preview is affordable again.
             "--preview", "ccpick show {1}", "--preview-window", "right:45%:wrap",
-            "--header", "Enter: resume   Esc: cancel   (type to fuzzy-filter)",
+            // Ctrl-E renames the highlighted session (prompts on the terminal),
+            // then reloads the list so the new title shows immediately.
+            "--bind", "ctrl-e:execute(ccpick rename {1})+reload(ccpick rows)",
+            "--header", "Enter: resume   Ctrl-E: rename   Esc: cancel",
         }) psi.ArgumentList.Add(a);
 
         string choice;
