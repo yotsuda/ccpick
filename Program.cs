@@ -223,6 +223,17 @@ internal static partial class Program
 
     [GeneratedRegex("<[^>]+>")] private static partial Regex TagRx();
     [GeneratedRegex("\\s+")] private static partial Regex WsRx();
+    [GeneratedRegex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")] private static partial Regex GuidRx();
+
+    // fzf placeholders can hand us the bare id, the whole "<id>\t<visible>" row,
+    // or a quoted/CR-wrapped variant depending on --with-nth and the OS shell.
+    // Pull the session GUID out of whatever we get.
+    static string ExtractId(string? s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        var m = GuidRx().Match(s);
+        return m.Success ? m.Value : s.Trim();
+    }
 
     static string LeafOf(string p)
     {
@@ -364,9 +375,10 @@ internal static partial class Program
         }
     }
 
-    static int CmdShow(string id)
+    static int CmdShow(string arg)
     {
-        if (string.IsNullOrWhiteSpace(id)) return Fail("usage: ccpick show <id>");
+        if (string.IsNullOrWhiteSpace(arg)) return Fail("usage: ccpick show <id>");
+        var id = ExtractId(arg);
 
         string? cwd;
         var cache = ReadCache();
@@ -423,7 +435,9 @@ internal static partial class Program
             foreach (var a in new[]
             {
                 "--ansi", "--delimiter", "\t", "--with-nth", "2",
-                "--preview", "ccpick show {1}", "--preview-window", "right:45%:wrap",
+                // Pass the whole row ({}) — with --with-nth, {1} resolves to the
+                // visible field, not the id. ccpick show digs the GUID out.
+                "--preview", "ccpick show {}", "--preview-window", "right:45%:wrap",
                 // We capture Ctrl-E ourselves: fzf reports the pressed key on the
                 // first output line, and the rename prompt then runs in THIS
                 // process — which reliably owns the terminal, unlike an
@@ -447,7 +461,7 @@ internal static partial class Program
             var sel = lines.Skip(1).FirstOrDefault(l => l.Trim().Length > 0);
             if (string.IsNullOrEmpty(sel)) return 0; // Esc / nothing chosen
 
-            var id = sel.Split('\t')[0].Trim();
+            var id = ExtractId(sel);
 
             if (key == "ctrl-e")
             {
