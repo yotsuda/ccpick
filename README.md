@@ -26,7 +26,7 @@ ccp list   →   fzf  (real-time fuzzy filter + preview)   →   claude --resume
 
 - **Reads** `~/.claude/projects/<slug>/<guid>.jsonl` (top-level files only; `subagents/` internal logs are skipped).
 - **Titles** come from the first real user prompt or a `summary` line — heuristic, fully local, nothing is sent anywhere.
-- **Caches** results in `~/.claude/ccpick-cache.json` keyed by file mtime, so only changed sessions are re-scanned. Cold scan of ~100 sessions ≈ 2 s; warm launches ≈ 0.2 s.
+- **Caches** results in `~/.claude/ccp-cache.json` keyed by file mtime, so only changed sessions are re-scanned. Cold scan of ~100 sessions ≈ 2 s; warm launches ≈ 0.2 s.
 - **Preview** of the focused session is shown live by re-invoking `ccp show <id>` (a ~0.2 s spawn — cheap because the tool starts fast).
 
 It is *not* an `fzf` plugin — `fzf` has no plugin system. `ccpick` is a small wrapper that uses `fzf` as the interactive filter, like `forgit` or `fzf-git.sh`.
@@ -66,7 +66,7 @@ The same one `dotnet tool` package runs on **Windows, macOS, and Linux**, and th
 
 ## Custom titles
 
-Auto-titles are handy but generic. Press **Ctrl-E** on any row in the picker to give that session a memorable name, or use `ccp name`. Overrides are stored in `~/.claude/ccpick-titles.json`, **separate from the mtime cache**, so a name you set sticks even as the session keeps growing.
+Auto-titles are handy but generic. Press **Ctrl-E** on any row in the picker to give that session a memorable name, or use `ccp name`. Overrides are stored in `~/.claude/ccp-titles.json`, **separate from the mtime cache**, so a name you set sticks even as the session keeps growing.
 
 **Name a session right after exiting it.** When Claude Code prints `claude --resume <guid>` on exit, you don't even need the GUID — just run:
 

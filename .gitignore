@@ -14,4 +14,4 @@ Desktop.ini
 
 # The session index cache lives in ~/.claude, not here, but ignore it anyway
 # in case anyone runs the tool from inside the repo with a relative path.
-ccpick-cache.json
+ccp-cache.json

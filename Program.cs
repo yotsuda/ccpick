@@ -11,10 +11,10 @@ internal static partial class Program
 {
     static readonly string Home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     static string ProjectsRoot => Path.Combine(Home, ".claude", "projects");
-    static string CachePath => Path.Combine(Home, ".claude", "ccpick-cache.json");
+    static string CachePath => Path.Combine(Home, ".claude", "ccp-cache.json");
     // User-assigned title overrides (id -> title). Independent of the mtime
     // cache, so a custom name survives session re-scans.
-    static string TitlesPath => Path.Combine(Home, ".claude", "ccpick-titles.json");
+    static string TitlesPath => Path.Combine(Home, ".claude", "ccp-titles.json");
 
     static int Main(string[] args)
     {
