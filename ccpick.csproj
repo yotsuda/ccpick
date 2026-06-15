@@ -15,9 +15,15 @@
     <PackageId>ccpick</PackageId>
     <Version>0.1.0</Version>
     <Authors>Yoshifumi Tsuda</Authors>
-    <Description>Tiny fzf-based session picker for Claude Code: fuzzy-filter recent sessions and claude --resume the one you pick.</Description>
+    <Description>Tiny fzf-based session picker for Claude Code: fuzzy-filter recent sessions by summary and `claude --resume` the one you pick. Installs the `ccp` command. Requires fzf.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/yotsuda/ccpick</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/yotsuda/ccpick</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <PackageTags>claude-code;claude;fzf;cli;session-manager;resume;dotnet-tool</PackageTags>
+    <PackageReleaseNotes>Initial release: fzf-based session picker with cached scan, custom titles (Ctrl-E / ccp name), live preview.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
