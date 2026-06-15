@@ -309,23 +309,44 @@ internal static partial class Program
             return 0;
         }
 
-        string newTitle;
         if (args.Length >= 3)
         {
-            newTitle = string.Join(' ', args.Skip(2));
+            titles[id] = string.Join(' ', args.Skip(2)).Trim();
+            WriteTitles(titles);
+            Console.WriteLine("renamed.");
         }
         else
         {
-            Console.WriteLine($"current: {ResolveTitle(id)}");
-            Console.Write("new title (Enter to cancel): ");
-            newTitle = Console.ReadLine() ?? "";
-            if (string.IsNullOrWhiteSpace(newTitle)) { Console.WriteLine("cancelled."); return 0; }
+            PromptRename(id);
         }
-
-        titles[id] = newTitle.Trim();
-        WriteTitles(titles);
-        Console.WriteLine("renamed.");
         return 0;
+    }
+
+    // Interactive rename used by both `ccpick rename <id>` and the picker's
+    // Ctrl-E. Runs in the ccpick process, so Console input is reliable.
+    static void PromptRename(string id)
+    {
+        Console.WriteLine();
+        Console.WriteLine($"current: {ResolveTitle(id)}");
+        Console.Write("new title (Enter to cancel, '-' to reset to auto): ");
+        var nt = (Console.ReadLine() ?? "").Trim();
+        var titles = ReadTitles();
+        if (nt == "-")
+        {
+            titles.Remove(id);
+            WriteTitles(titles);
+            Console.WriteLine("title reset to auto.");
+        }
+        else if (nt.Length > 0)
+        {
+            titles[id] = nt;
+            WriteTitles(titles);
+            Console.WriteLine("renamed.");
+        }
+        else
+        {
+            Console.WriteLine("cancelled.");
+        }
     }
 
     static int CmdShow(string id)
@@ -365,55 +386,68 @@ internal static partial class Program
         if (!ExistsOnPath("fzf"))
             return Fail("fzf not found. Install it: winget install fzf  (or: brew install fzf / apt install fzf)");
 
-        var sessions = GetSessions();
-        if (sessions.Count == 0) { Console.WriteLine("No sessions found."); return 0; }
-
-        var wf = MultiFolder(sessions);
-        var sb = new StringBuilder();
-        // Each line is "<id>\t<visible>": the id (field 1) is hidden from the
-        // display but kept for the preview ({1}) and for resuming the choice.
-        foreach (var s in sessions) sb.Append(s.Id).Append('\t').Append(Visible(s, wf)).Append('\n');
-
-        var psi = new ProcessStartInfo("fzf")
+        while (true)
         {
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            UseShellExecute = false,
-            StandardInputEncoding = Encoding.UTF8,
-            StandardOutputEncoding = Encoding.UTF8,
-        };
-        foreach (var a in new[]
-        {
-            "--ansi", "--delimiter", "\t", "--with-nth", "2",
-            // `show` is now a fast exe, so a live preview is affordable again.
-            "--preview", "ccpick show {1}", "--preview-window", "right:45%:wrap",
-            // Ctrl-E renames the highlighted session (prompts on the terminal),
-            // then reloads the list so the new title shows immediately.
-            "--bind", "ctrl-e:execute(ccpick rename {1})+reload(ccpick rows)",
-            "--header", "Enter: resume   Ctrl-E: rename   Esc: cancel",
-        }) psi.ArgumentList.Add(a);
+            var sessions = GetSessions();
+            if (sessions.Count == 0) { Console.WriteLine("No sessions found."); return 0; }
 
-        string choice;
-        using (var p = Process.Start(psi)!)
-        {
-            p.StandardInput.Write(sb.ToString());
-            p.StandardInput.Close();
-            choice = p.StandardOutput.ReadToEnd();
-            p.WaitForExit();
+            var wf = MultiFolder(sessions);
+            var sb = new StringBuilder();
+            // "<id>\t<visible>": id (field 1) is hidden from the display but kept
+            // for the preview ({1}) and for resuming / renaming the choice.
+            foreach (var s in sessions) sb.Append(s.Id).Append('\t').Append(Visible(s, wf)).Append('\n');
+
+            var psi = new ProcessStartInfo("fzf")
+            {
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                StandardInputEncoding = Encoding.UTF8,
+                StandardOutputEncoding = Encoding.UTF8,
+            };
+            foreach (var a in new[]
+            {
+                "--ansi", "--delimiter", "\t", "--with-nth", "2",
+                "--preview", "ccpick show {1}", "--preview-window", "right:45%:wrap",
+                // We capture Ctrl-E ourselves: fzf reports the pressed key on the
+                // first output line, and the rename prompt then runs in THIS
+                // process — which reliably owns the terminal, unlike an
+                // execute() child (flaky for interactive input on Windows).
+                "--expect", "ctrl-e",
+                "--header", "Enter: resume   Ctrl-E: rename   Esc: cancel",
+            }) psi.ArgumentList.Add(a);
+
+            string outp;
+            using (var p = Process.Start(psi)!)
+            {
+                p.StandardInput.Write(sb.ToString());
+                p.StandardInput.Close();
+                outp = p.StandardOutput.ReadToEnd();
+                p.WaitForExit();
+            }
+
+            // --expect output: line 0 = key (empty when Enter), line 1 = row.
+            var lines = outp.Split('\n');
+            var key = lines.Length > 0 ? lines[0].Trim() : "";
+            var sel = lines.Skip(1).FirstOrDefault(l => l.Trim().Length > 0);
+            if (string.IsNullOrEmpty(sel)) return 0; // Esc / nothing chosen
+
+            var id = sel.Split('\t')[0].Trim();
+
+            if (key == "ctrl-e")
+            {
+                PromptRename(id);
+                continue; // re-open the picker so the new title shows
+            }
+
+            Console.WriteLine($"claude --resume {id}");
+            var cp = new ProcessStartInfo("claude") { UseShellExecute = false };
+            cp.ArgumentList.Add("--resume");
+            cp.ArgumentList.Add(id);
+            try { Process.Start(cp)?.WaitForExit(); }
+            catch (Exception ex) { return Fail($"failed to launch claude: {ex.Message}"); }
+            return 0;
         }
-
-        var line = choice.Split('\n').FirstOrDefault(l => l.Trim().Length > 0);
-        if (string.IsNullOrEmpty(line)) return 0; // cancelled (Esc)
-
-        var id = line.Split('\t')[0].Trim();
-        Console.WriteLine($"claude --resume {id}");
-
-        var cp = new ProcessStartInfo("claude") { UseShellExecute = false };
-        cp.ArgumentList.Add("--resume");
-        cp.ArgumentList.Add(id);
-        try { Process.Start(cp)?.WaitForExit(); }
-        catch (Exception ex) { return Fail($"failed to launch claude: {ex.Message}"); }
-        return 0;
     }
 
     static bool ExistsOnPath(string exe)
