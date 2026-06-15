@@ -122,7 +122,20 @@ internal static partial class Program
         try
         {
             if (File.Exists(TitlesPath))
-                return JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(TitlesPath)) ?? new();
+            {
+                var raw = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(TitlesPath));
+                if (raw is null) return new();
+                // Self-heal: normalize keys to the embedded GUID. Older builds
+                // could persist a key with a leading BOM/junk (from fzf output),
+                // which would never match a clean session id.
+                var clean = new Dictionary<string, string>();
+                foreach (var kv in raw)
+                {
+                    var key = ExtractId(kv.Key);
+                    if (!string.IsNullOrEmpty(key)) clean[key] = kv.Value;
+                }
+                return clean;
+            }
         }
         catch { /* corrupt -> ignore */ }
         return new();
