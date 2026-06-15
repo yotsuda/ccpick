@@ -202,13 +202,13 @@ internal static partial class Program
     static bool MultiFolder(IEnumerable<Session> ss) =>
         ss.Select(s => CwdLabel(s.Cwd)).Distinct().Count() > 1;
 
-    static string Row(Session s, bool withFolder)
+    // The visible part of a row, space-separated so columns sit tight (a TAB
+    // here would render at 8-col tab stops and leave a big gap after the date).
+    static string Visible(Session s, bool withFolder)
     {
         var date = s.Mtime.ToString("yyyy-MM-dd HH:mm");
         var t = s.Title.Length > 90 ? s.Title[..90] : s.Title;
-        return withFolder
-            ? $"{s.Id}\t{date}\t{CwdLabel(s.Cwd)}\t{t}"
-            : $"{s.Id}\t{date}\t{t}";
+        return withFolder ? $"{date}  {CwdLabel(s.Cwd)}  {t}" : $"{date}  {t}";
     }
 
     // ---- cache ----
@@ -237,7 +237,7 @@ internal static partial class Program
     {
         var sessions = GetSessions();
         var wf = MultiFolder(sessions);
-        foreach (var s in sessions) Console.WriteLine(Row(s, wf));
+        foreach (var s in sessions) Console.WriteLine(Visible(s, wf));
         return 0;
     }
 
@@ -283,7 +283,9 @@ internal static partial class Program
 
         var wf = MultiFolder(sessions);
         var sb = new StringBuilder();
-        foreach (var s in sessions) sb.Append(Row(s, wf)).Append('\n');
+        // Each line is "<id>\t<visible>": the id (field 1) is hidden from the
+        // display but kept for the preview ({1}) and for resuming the choice.
+        foreach (var s in sessions) sb.Append(s.Id).Append('\t').Append(Visible(s, wf)).Append('\n');
 
         var psi = new ProcessStartInfo("fzf")
         {
@@ -293,12 +295,9 @@ internal static partial class Program
             StandardInputEncoding = Encoding.UTF8,
             StandardOutputEncoding = Encoding.UTF8,
         };
-        // col 1 is the (hidden) id; remaining display cols depend on whether the
-        // folder column is present.
-        var withNth = wf ? "2,3,4" : "2,3";
         foreach (var a in new[]
         {
-            "--ansi", "--delimiter", "\t", "--with-nth", withNth,
+            "--ansi", "--delimiter", "\t", "--with-nth", "2",
             // `show` is now a fast exe, so a live preview is affordable again.
             "--preview", "ccpick show {1}", "--preview-window", "right:45%:wrap",
             "--header", "Enter: resume   Esc: cancel   (type to fuzzy-filter)",
