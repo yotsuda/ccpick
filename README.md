@@ -63,6 +63,7 @@ The same one `dotnet tool` package runs on **Windows, macOS, and Linux**, and th
 | `ccp name <text>` | Name the most recent session — the one you just exited |
 | `ccp name <id> <text>` | Name a specific session by id (omit `<text>` to type it interactively) |
 | `ccp name <id> --clear` | Reset to the auto-generated title |
+| `ccp -h`, `--help`, `help` | Show usage |
 
 ## Custom titles
 

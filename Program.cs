@@ -29,11 +29,18 @@ internal static partial class Program
             "name" => CmdName(args),
             "pick" => CmdPick(),
             "-h" or "--help" or "help" => CmdHelp(),
-            _ => Fail($"unknown command: {cmd}")
+            _ => FailUnknown(cmd)
         };
     }
 
     static int Fail(string msg) { Console.Error.WriteLine(msg); return 1; }
+
+    static int FailUnknown(string cmd)
+    {
+        Console.Error.WriteLine($"unknown command: {cmd}");
+        Console.Error.WriteLine("run 'ccp --help' for usage.");
+        return 1;
+    }
 
     static int CmdHelp()
     {
@@ -42,10 +49,11 @@ internal static partial class Program
         Console.WriteLine("  ccp                     open the fzf picker, then claude --resume the chosen session");
         Console.WriteLine("                          (Ctrl-E in the picker renames the selected session)");
         Console.WriteLine("  ccp list                print one row per session: date  [folder]  title");
-        Console.WriteLine("  ccp show [<id>]          print a session's id/cwd/name (latest if no id, like 'name')");
+        Console.WriteLine("  ccp show [<id>]         print a session's id/cwd/name (latest if no id, like 'name')");
         Console.WriteLine("  ccp name <text>         name the most recent session (the one you just exited)");
         Console.WriteLine("  ccp name <id> <text>    name a specific session by id (omit <text> for a prompt)");
         Console.WriteLine("  ccp name <id> --clear   reset to the auto-generated title");
+        Console.WriteLine("  ccp -h, --help, help    show this help");
         return 0;
     }
 
